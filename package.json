@@ -1,0 +1,43 @@
+{
+  "name": "caching-stream",
+  "version": "0.0.0",
+  "description": "My brilliant module",
+  "license": "MIT",
+  "repository": "jamestalmage/caching-stream",
+  "author": {
+    "name": "James Talmage",
+    "email": "james@talmage.io",
+    "url": "github.com/jamestalmage"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "test": "xo && istanbul cover -x test.js ./node_modules/.bin/_mocha",
+    "preversion": "xo && mocha"
+  },
+  "files": [
+    "index.js",
+    "copy-buffer.js"
+  ],
+  "keywords": [
+    "stream",
+    "copy",
+    "cache",
+    "buffer"
+  ],
+  "dependencies": {
+    "through2": "^2.0.0"
+  },
+  "devDependencies": {
+    "istanbul": "^0.3.22",
+    "mocha": "^2.2.5",
+    "xo": "^0.9.0"
+  },
+  "xo": {
+    "envs": [
+      "node",
+      "mocha"
+    ]
+  }
+}
