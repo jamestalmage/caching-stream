@@ -5,7 +5,7 @@ var stream = require('readable-stream');
 
 function cachingStream(defensiveCopies) {
 	var created = false;
-	var copyStream = noOpReader();
+	var cacheStream = noOpReader();
 
 	var output = noOpReader();
 	var input = new stream.Writable({write: write})
@@ -18,8 +18,8 @@ function cachingStream(defensiveCopies) {
 	return duplex;
 
 	function write(buffer, enc, cb) {
-		if (copyStream) {
-			copyStream.push(copyBuffer(buffer));
+		if (cacheStream) {
+			cacheStream.push(copyBuffer(buffer));
 		}
 		if (output) {
 			output.push(buffer);
@@ -36,11 +36,11 @@ function cachingStream(defensiveCopies) {
 		if (created) {
 			throw new Error('copyStream was already created');
 		}
-		if (!copyStream) {
+		if (!cacheStream) {
 			throw new Error('cache has been dropped');
 		}
 		created = true;
-		return copyStream;
+		return cacheStream;
 	}
 
 	function endPassThroughStream() {
@@ -51,17 +51,17 @@ function cachingStream(defensiveCopies) {
 	}
 
 	function endCacheStream() {
-		if (copyStream) {
-			copyStream.push(null);
+		if (cacheStream) {
+			cacheStream.push(null);
 			if (created) {
-				copyStream = null;
+				cacheStream = null;
 			}
 		}
 	}
 
 	function dropCacheStore() {
 		if (!created) {
-			copyStream = null;
+			cacheStream = null;
 		}
 	}
 
