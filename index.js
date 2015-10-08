@@ -5,53 +5,48 @@ var stream = require('readable-stream');
 
 function cachingStream() {
 	var ended = false;
-	var caching = true;
-	var passingThrough = true;
+	var hasCache = true;
 
 	var cache = [];
 	var copyStream = null;
 
 	var output = noOpReader();
 	var input = new stream.Writable({write: handleData})
-		.once('finish', handleFlush);
+		.once('finish', inputEnded);
 	var duplex = duplexer(input, output);
 
-	duplex.endOutput = endOutput;
+	duplex.endOutput = endOutputStream;
 	duplex.makeCopyStream = makeCopyStream;
 	duplex.dropCache = dropCache;
 
 	return duplex;
 
 	function handleData(buffer, enc, cb) {
-		if (caching) {
-			var cacheCopy = passingThrough ? new Buffer(buffer) : buffer;
+		if (hasCache) {
+			var cacheCopy = output ? new Buffer(buffer) : buffer;
 			if (copyStream) {
 				copyStream.push(cacheCopy);
 			} else {
 				cache.push(cacheCopy);
 			}
 		}
-		if (passingThrough) {
+		if (output) {
 			output.push(buffer);
 		}
 		cb();
 	}
 
-	function handleFlush() {
+	function inputEnded() {
 		ended = true;
-		if (output) {
-			output.push(null);
-		}
-		if (caching && copyStream) {
-			dropCache(true);
-		}
+		endOutputStream();
+		endCacheStream();
 	}
 
 	function makeCopyStream() {
 		if (copyStream) {
 			throw new Error('copyStream was already created');
 		}
-		if (!caching) {
+		if (!hasCache) {
 			throw new Error('cache has been dropped');
 		}
 		try {
@@ -63,25 +58,37 @@ function cachingStream() {
 		} finally {
 			cache = null;
 			if (ended) {
-				dropCache(true);
+				endCacheStream();
 			}
 		}
 	}
 
-	function endOutput() {
-		passingThrough = false;
-		output.push(null);
-		output = null;
+	function endOutputStream() {
+		if (output) {
+			output.push(null);
+			output = null;
+		}
 	}
 
-	function dropCache(endStream) {
-		cache = null;
-		if (copyStream && endStream) {
+	function endCacheStream() {
+		if (copyStream) {
+			hasCache = false;
 			copyStream.push(null);
 			copyStream = null;
 		}
+	}
+
+	function dropCacheStore() {
+		cache = null;
 		if (!copyStream) {
-			caching = false;
+			hasCache = false;
+		}
+	}
+
+	function dropCache(endStream) {
+		dropCacheStore();
+		if (endStream) {
+			endCacheStream();
 		}
 	}
 }
