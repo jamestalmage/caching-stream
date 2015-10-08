@@ -207,37 +207,47 @@ it('proof of concept: there is a need', function (done) {
 	});
 });
 
-it('proof of concept: buffers need to be copied', function (done) {
+it('with no defensive copies, cache output is modified by transforms on passthrough', function (done) {
+	pipeToTransform(function () {
+		caching.createCacheStream().pipe(copy2);
+		setTimeout(function () {
+			// Streams do not make copies of buffers for performance reasons.
+			// So copy2 is affected by the transform, even though it is not downstream from it.
+			assert.strictEqual(copy2.toString(), 'ABCTUV', 'copy2');
+			assert.strictEqual(copy1.toString(), 'ABCTUV', 'copy1');
+			done();
+		});
+	});
+});
+
+it('defensive copies prevent transform interference', function (done) {
+	caching = cachingStream(true);
+	pipeToTransform(function () {
+		caching.createCacheStream().pipe(copy2);
+		setTimeout(function () {
+			assert.strictEqual(copy2.toString(), 'abctuv', 'copy2');
+			assert.strictEqual(copy1.toString(), 'ABCTUV', 'copy1');
+			done();
+		});
+	});
+});
+
+function pipeToTransform(done) {
 	var transform = through2(function (chunk, enc, cb) {
-		chunk[0] += 2;
+		// VERY naive toUpperCase that modifies the existing Buffer
+		for (var i = 0; i < chunk.length; i++) {
+			chunk[i] -= 32;
+		}
 		cb(null, chunk);
 	});
 
-	copy1 = copyStream(false);
-	copy2 = copyStream(false);
-	var downstream = copyStream();
-
-	input
-		.pipe(copy1);
-
-	input
-		.pipe(transform)
-		.pipe(downstream);
-
-	input
-		.pipe(copy2);
+	input.pipe(caching).pipe(transform).pipe(copy1);
 
 	input.write('abc');
 	input.write('tuv');
 
-	setTimeout(function () {
-		// Even though they are not piped through the transform - the buffers they receive are modified
-		// streams do not make safety copies of buffers (for performance reasons).
-		assert.strictEqual(copy1.toString(), downstream.toString(), 'copy1');
-		assert.strictEqual(copy2.toString(), downstream.toString(), 'copy2');
-		done();
-	});
-});
+	setTimeout(done);
+}
 
 it('ending a stream twice is fine', function () {
 	var s = through2();

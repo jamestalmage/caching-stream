@@ -3,7 +3,7 @@ module.exports = cachingStream;
 var duplexer = require('duplexify');
 var stream = require('readable-stream');
 
-function cachingStream() {
+function cachingStream(defensiveCopies) {
 	var created = false;
 	var copyStream = noOpReader();
 
@@ -19,9 +19,7 @@ function cachingStream() {
 
 	function write(buffer, enc, cb) {
 		if (copyStream) {
-			copyStream.push(
-				output ? new Buffer(buffer) : buffer
-			);
+			copyStream.push(copyBuffer(buffer));
 		}
 		if (output) {
 			output.push(buffer);
@@ -72,6 +70,10 @@ function cachingStream() {
 		if (endStream) {
 			endCacheStream();
 		}
+	}
+
+	function copyBuffer(buffer) {
+		return defensiveCopies && output ? new Buffer(buffer) : buffer;
 	}
 }
 
