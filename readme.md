@@ -52,10 +52,15 @@ caching.dropCache(true);
 
 ## API
 
-### cached = cachingStream()
+### cached = cachingStream(defensiveCopies)
 
 Creates a caching stream. It is a `DuplexStream` stream, that has all the events/methods from 
 both the `Readable` and `Writable` stream classes. It passes data through unaltered.
+
+If `defensiveCopies` is true, it will make defensive copies of the Buffers.
+This prevents transforms piped from the PassThrough output from affecting the Buffers 
+in the cached output (and visa versa). This will impact performance and memory usage,
+so avoid it unless you really need it.
 
 #### cached.createCacheStream()
                                     
