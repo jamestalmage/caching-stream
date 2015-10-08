@@ -27,11 +27,13 @@
     "buffer"
   ],
   "dependencies": {
-    "through2": "^2.0.0"
+    "duplexify": "^3.4.2",
+    "readable-stream": "^2.0.2"
   },
   "devDependencies": {
     "istanbul": "^0.3.22",
     "mocha": "^2.2.5",
+    "through2": "^2.0.0",
     "xo": "^0.9.0"
   },
   "xo": {

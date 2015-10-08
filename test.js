@@ -17,9 +17,7 @@ beforeEach(function () {
 
 function pipeTo1() {
 	input
-		.pipe(cacheCtrl.input);
-
-	cacheCtrl.output
+		.pipe(cacheCtrl)
 		.pipe(copy1);
 
 	input.push('foo');

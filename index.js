@@ -1,6 +1,7 @@
 'use strict';
 module.exports = cachingStream;
-var through2 = require('through2');
+var duplexer = require('duplexify');
+var stream = require('readable-stream');
 
 function cachingStream() {
 	var ended = false;
@@ -10,15 +11,16 @@ function cachingStream() {
 	var cache = [];
 	var copyStream = null;
 
-	var output = through2();
+	var output = noOpReader();
+	var input = new stream.Writable({write: handleData})
+		.once('finish', handleFlush);
+	var duplex = duplexer(input, output);
 
-	return {
-		input: through2(handleData, handleFlush),
-		output: output,
-		endOutput: endOutput,
-		makeCopyStream: makeCopyStream,
-		dropCache: dropCache
-	};
+	duplex.endOutput = endOutput;
+	duplex.makeCopyStream = makeCopyStream;
+	duplex.dropCache = dropCache;
+
+	return duplex;
 
 	function handleData(buffer, enc, cb) {
 		if (caching) {
@@ -35,15 +37,14 @@ function cachingStream() {
 		cb();
 	}
 
-	function handleFlush(cb) {
+	function handleFlush() {
 		ended = true;
 		if (output) {
-			output.end();
+			output.push(null);
 		}
 		if (caching && copyStream) {
 			dropCache(true);
 		}
-		cb();
 	}
 
 	function makeCopyStream() {
@@ -54,7 +55,7 @@ function cachingStream() {
 			throw new Error('cache has been dropped');
 		}
 		try {
-			copyStream = through2();
+			copyStream = noOpReader();
 			cache.forEach(function (buffer) {
 				copyStream.push(buffer);
 			});
@@ -69,18 +70,24 @@ function cachingStream() {
 
 	function endOutput() {
 		passingThrough = false;
-		output.end();
+		output.push(null);
 		output = null;
 	}
 
 	function dropCache(endStream) {
 		cache = null;
 		if (copyStream && endStream) {
-			copyStream.end();
+			copyStream.push(null);
 			copyStream = null;
 		}
 		if (!copyStream) {
 			caching = false;
 		}
 	}
+}
+
+function noOp() {}
+
+function noOpReader() {
+	return new stream.Readable({read: noOp});
 }
