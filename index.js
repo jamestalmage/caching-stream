@@ -11,17 +11,16 @@ function cachingStream() {
 	var copyStream = null;
 
 	var output = noOpReader();
-	var input = new stream.Writable({write: handleData})
+	var input = new stream.Writable({write: write})
 		.once('finish', inputEnded);
+
 	var duplex = duplexer(input, output);
-
-	duplex.endOutput = endOutputStream;
-	duplex.makeCopyStream = makeCopyStream;
+	duplex.endPassThroughStream = endPassThroughStream;
+	duplex.createCacheStream = createCacheStream;
 	duplex.dropCache = dropCache;
-
 	return duplex;
 
-	function handleData(buffer, enc, cb) {
+	function write(buffer, enc, cb) {
 		if (hasCache) {
 			var cacheCopy = output ? new Buffer(buffer) : buffer;
 			if (copyStream) {
@@ -38,11 +37,11 @@ function cachingStream() {
 
 	function inputEnded() {
 		ended = true;
-		endOutputStream();
+		endPassThroughStream();
 		endCacheStream();
 	}
 
-	function makeCopyStream() {
+	function createCacheStream() {
 		if (copyStream) {
 			throw new Error('copyStream was already created');
 		}
@@ -63,7 +62,7 @@ function cachingStream() {
 		}
 	}
 
-	function endOutputStream() {
+	function endPassThroughStream() {
 		if (output) {
 			output.push(null);
 			output = null;

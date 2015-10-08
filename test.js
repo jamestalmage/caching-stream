@@ -29,7 +29,7 @@ function baseTest(done) {
 
 	setTimeout(function () {
 		assert.strictEqual(copy1.toString(), 'foobar');
-		cacheCtrl.makeCopyStream().pipe(copy2);
+		cacheCtrl.createCacheStream().pipe(copy2);
 		setTimeout(function () {
 			assert.strictEqual(copy2.toString(), 'foobar');
 			done();
@@ -96,7 +96,7 @@ it('dropCache(true) will end only the cache stream', runBase(function (done) {
 }));
 
 it('endOutput', runBase(function (done) {
-	cacheCtrl.endOutput();
+	cacheCtrl.endPassThroughStream();
 	setTimeout(function () {
 		assert(copy1.isEnded);
 		assert(!copy2.isEnded);
@@ -119,7 +119,7 @@ it('cache can be attached after the first stream has ended', function (done) {
 		assert(!copy2.isEnded);
 		assert.strictEqual(copy1.toString(), 'foobar');
 		assert.strictEqual(copy2.toString(), '');
-		cacheCtrl.makeCopyStream().pipe(copy2);
+		cacheCtrl.createCacheStream().pipe(copy2);
 		setTimeout(function () {
 			assert(copy2.isEnded);
 			assert.strictEqual(copy2.toString(), 'foobar');
@@ -129,16 +129,16 @@ it('cache can be attached after the first stream has ended', function (done) {
 });
 
 it('makeCachedStream throws if already created ', function () {
-	cacheCtrl.makeCopyStream();
+	cacheCtrl.createCacheStream();
 	assert.throws(function () {
-		cacheCtrl.makeCopyStream();
+		cacheCtrl.createCacheStream();
 	}, /already created/);
 });
 
 it('makeCachedStream throws if already dropped ', function () {
 	cacheCtrl.dropCache();
 	assert.throws(function () {
-		cacheCtrl.makeCopyStream();
+		cacheCtrl.createCacheStream();
 	}, /dropped/);
 });
 
