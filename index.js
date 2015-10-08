@@ -33,7 +33,7 @@ function cachingStream(defensiveCopies) {
 	}
 
 	function createCacheStream() {
-		if (created && copyStream) {
+		if (created) {
 			throw new Error('copyStream was already created');
 		}
 		if (!copyStream) {
