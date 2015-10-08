@@ -6,18 +6,18 @@ var through2 = require('through2');
 var input;
 var copy1;
 var copy2;
-var cacheCtrl;
+var caching;
 
 beforeEach(function () {
 	input = through2();
-	cacheCtrl = cachingStream();
+	caching = cachingStream();
 	copy1 = copyStream();
 	copy2 = copyStream();
 });
 
 function pipeTo1() {
 	input
-		.pipe(cacheCtrl)
+		.pipe(caching)
 		.pipe(copy1);
 
 	input.push('foo');
@@ -29,7 +29,7 @@ function baseTest(done) {
 
 	setTimeout(function () {
 		assert.strictEqual(copy1.toString(), 'foobar');
-		cacheCtrl.createCacheStream().pipe(copy2);
+		caching.createCacheStream().pipe(copy2);
 		setTimeout(function () {
 			assert.strictEqual(copy2.toString(), 'foobar');
 			done();
@@ -64,7 +64,7 @@ it('ending input ends both other streams', runBase(function (done) {
 }));
 
 it('dropCache will not end the stream if already created', runBase(function (done) {
-	cacheCtrl.dropCache();
+	caching.dropCache();
 	setTimeout(function () {
 		assert(!copy1.isEnded);
 		assert(!copy2.isEnded);
@@ -80,7 +80,7 @@ it('dropCache will not end the stream if already created', runBase(function (don
 }));
 
 it('dropCache(true) will end only the cache stream', runBase(function (done) {
-	cacheCtrl.dropCache(true);
+	caching.dropCache(true);
 	setTimeout(function () {
 		assert(!copy1.isEnded);
 		assert(copy2.isEnded);
@@ -96,7 +96,7 @@ it('dropCache(true) will end only the cache stream', runBase(function (done) {
 }));
 
 it('endOutput', runBase(function (done) {
-	cacheCtrl.endPassThroughStream();
+	caching.endPassThroughStream();
 	setTimeout(function () {
 		assert(copy1.isEnded);
 		assert(!copy2.isEnded);
@@ -119,7 +119,7 @@ it('cache can be attached after the first stream has ended', function (done) {
 		assert(!copy2.isEnded);
 		assert.strictEqual(copy1.toString(), 'foobar');
 		assert.strictEqual(copy2.toString(), '');
-		cacheCtrl.createCacheStream().pipe(copy2);
+		caching.createCacheStream().pipe(copy2);
 		setTimeout(function () {
 			assert(copy2.isEnded);
 			assert.strictEqual(copy2.toString(), 'foobar');
@@ -129,16 +129,16 @@ it('cache can be attached after the first stream has ended', function (done) {
 });
 
 it('makeCachedStream throws if already created ', function () {
-	cacheCtrl.createCacheStream();
+	caching.createCacheStream();
 	assert.throws(function () {
-		cacheCtrl.createCacheStream();
+		caching.createCacheStream();
 	}, /already created/);
 });
 
 it('makeCachedStream throws if already dropped ', function () {
-	cacheCtrl.dropCache();
+	caching.dropCache();
 	assert.throws(function () {
-		cacheCtrl.createCacheStream();
+		caching.createCacheStream();
 	}, /dropped/);
 });
 
