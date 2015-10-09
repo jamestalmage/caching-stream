@@ -7,11 +7,11 @@ function cachingStream(defensiveCopies) {
 	var created = false;
 	var cacheStream = noOpReader();
 
-	var output = noOpReader();
+	var output = noOpReader(true);
 	var input = new stream.Writable({write: write})
 		.once('finish', inputEnded);
 
-	var duplex = duplexer(input, output);
+	var duplex = duplexer(input, output, {readableObjectMode: true});
 	duplex.endPassThroughStream = endPassThroughStream;
 	duplex.createCacheStream = createCacheStream;
 	duplex.dropCache = dropCache;
@@ -79,6 +79,6 @@ function cachingStream(defensiveCopies) {
 
 function noOp() {}
 
-function noOpReader() {
-	return new stream.Readable({read: noOp});
+function noOpReader(objectMode) {
+	return new stream.Readable({objectMode: objectMode, read: noOp});
 }
