@@ -27,7 +27,6 @@
     "buffer"
   ],
   "dependencies": {
-    "duplexify": "^3.4.2",
     "readable-stream": "^2.0.2"
   },
   "devDependencies": {

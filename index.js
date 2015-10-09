@@ -1,17 +1,20 @@
 'use strict';
 module.exports = cachingStream;
-var duplexer = require('duplexify');
 var stream = require('readable-stream');
 
 function cachingStream(defensiveCopies) {
 	var created = false;
-	var cacheStream = noOpReader();
+	var notEnded = true;
+	var cacheStream = new stream.Readable({read: noOp});
 
-	var output = noOpReader(true);
-	var input = new stream.Writable({write: write})
-		.once('finish', inputEnded);
+	var duplex = new stream.Duplex({
+		write: write,
+		read: noOp,
+		readableObjectMode: true
+	});
 
-	var duplex = duplexer(input, output, {readableObjectMode: true});
+	duplex.once('finish', inputEnded);
+
 	duplex.endPassThroughStream = endPassThroughStream;
 	duplex.createCacheStream = createCacheStream;
 	duplex.dropCache = dropCache;
@@ -21,8 +24,8 @@ function cachingStream(defensiveCopies) {
 		if (cacheStream) {
 			cacheStream.push(copyBuffer(buffer));
 		}
-		if (output) {
-			output.push(buffer);
+		if (notEnded) {
+			this.push(buffer);
 		}
 		cb();
 	}
@@ -33,20 +36,17 @@ function cachingStream(defensiveCopies) {
 	}
 
 	function createCacheStream() {
-		if (created) {
-			throw new Error('copyStream was already created');
-		}
-		if (!cacheStream) {
-			throw new Error('cache has been dropped');
+		if (created || !cacheStream) {
+			throw new Error('cache was already ' + (created ? 'created' : 'dropped'));
 		}
 		created = true;
 		return cacheStream;
 	}
 
 	function endPassThroughStream() {
-		if (output) {
-			output.push(null);
-			output = null;
+		if (notEnded) {
+			notEnded = false;
+			duplex.push(null);
 		}
 	}
 
@@ -59,26 +59,18 @@ function cachingStream(defensiveCopies) {
 		}
 	}
 
-	function dropCacheStore() {
+	function dropCache(endStream) {
 		if (!created) {
 			cacheStream = null;
 		}
-	}
-
-	function dropCache(endStream) {
-		dropCacheStore();
 		if (endStream) {
 			endCacheStream();
 		}
 	}
 
 	function copyBuffer(buffer) {
-		return defensiveCopies && output ? new Buffer(buffer) : buffer;
+		return defensiveCopies && notEnded ? new Buffer(buffer) : buffer;
 	}
 }
 
 function noOp() {}
-
-function noOpReader(objectMode) {
-	return new stream.Readable({objectMode: objectMode, read: noOp});
-}
