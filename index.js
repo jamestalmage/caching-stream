@@ -9,8 +9,7 @@ function cachingStream(defensiveCopies) {
 
 	var duplex = new stream.Duplex({
 		write: write,
-		read: noOp,
-		readableObjectMode: true
+		read: noOp
 	});
 
 	duplex.once('finish', inputEnded);

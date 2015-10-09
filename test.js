@@ -1,8 +1,19 @@
 'use strict';
 var assert = require('assert');
 var cachingStream = require('./');
-var Transform = require('readable-stream').Transform;
-var PassThrough = require('readable-stream').PassThrough;
+var stream = require('readable-stream');
+var Transform = stream.Transform;
+var PassThrough = stream.PassThrough;
+var Writable = stream.Writable;
+var is3orHigher = require('semver').gte(process.version, '3.0.0');
+
+function onlyOnOld() {
+	if (is3orHigher) {
+		it.skip.apply(it, arguments);
+	} else {
+		it.apply(null, arguments);
+	}
+}
 
 var input;
 var copy1;
@@ -147,7 +158,7 @@ function copyStream(copy) {
 	copy = copy !== false;
 	var cache = [];
 	var ended = false;
-	var stream = new Transform({
+	var transform = new Transform({
 		transform: function (chunk, enc, cb) {
 			cache.push(copy ? new Buffer(chunk) : chunk);
 			cb(null, chunk);
@@ -158,7 +169,7 @@ function copyStream(copy) {
 		}
 	});
 
-	Object.defineProperties(stream, {
+	Object.defineProperties(transform, {
 		cachedChunks: {
 			get: function () {
 				return cache.map(function (buffer) {
@@ -178,16 +189,16 @@ function copyStream(copy) {
 		}
 	});
 
-	return stream;
+	return transform;
 }
 
 it('copyStream basic operation', function (done) {
-	var stream = copyStream();
-	stream.write('a');
-	stream.write('c');
+	var cs = copyStream();
+	cs.write('a');
+	cs.write('c');
 	setTimeout(function () {
-		assert.deepEqual(stream.cachedChunks, ['a', 'c']);
-		assert.strictEqual(stream.toString(), 'ac');
+		assert.deepEqual(cs.cachedChunks, ['a', 'c']);
+		assert.strictEqual(cs.toString(), 'ac');
 		done();
 	});
 });
@@ -208,7 +219,7 @@ it('proof of concept: there is a need', function (done) {
 	});
 });
 
-it('with no defensive copies, cache output is modified by transforms on passthrough', function (done) {
+onlyOnOld('with no defensive copies, cache output is modified by transforms on passthrough', function (done) {
 	pipeToTransform(function () {
 		caching.createCacheStream().pipe(copy2);
 		setTimeout(function () {
@@ -231,6 +242,32 @@ it('defensive copies prevent transform interference', function (done) {
 			done();
 		});
 	});
+});
+
+it('proof: how backpressure works', function () {
+	var pt = new PassThrough({highWaterMark: 3});
+	var cb;
+	var writable = new Writable({
+		write: function (chunk, enc, _cb) {
+			cb = _cb;
+		},
+		highWaterMark: 0
+	});
+
+	pt.pipe(writable);
+
+	assert(pt.push('a'), 'a');
+	assert(pt.push('b'), 'b');
+	assert(pt.push('c'), 'c');
+	assert(!pt.push('d'), 'd');
+	cb();
+	cb();
+	assert(pt.push('e'), 'e');
+	assert(!pt.push('f'), 'f');
+	cb();
+	cb();
+	assert(pt.push('g'), 'g');
+	assert(!pt.push('h'), 'h');
 });
 
 function pipeToTransform(done) {
