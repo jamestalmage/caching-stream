@@ -1,7 +1,8 @@
 'use strict';
 var assert = require('assert');
 var cachingStream = require('./');
-var through2 = require('through2');
+var Transform = require('readable-stream').Transform;
+var PassThrough = require('readable-stream').PassThrough;
 
 var input;
 var copy1;
@@ -9,7 +10,7 @@ var copy2;
 var caching;
 
 beforeEach(function () {
-	input = through2();
+	input = new PassThrough();
 	caching = cachingStream();
 	copy1 = copyStream();
 	copy2 = copyStream();
@@ -146,16 +147,16 @@ function copyStream(copy) {
 	copy = copy !== false;
 	var cache = [];
 	var ended = false;
-	var stream = through2(
-		function (chunk, enc, cb) {
+	var stream = new Transform({
+		transform: function (chunk, enc, cb) {
 			cache.push(copy ? new Buffer(chunk) : chunk);
 			cb(null, chunk);
 		},
-		function (cb) {
+		flush: function (cb) {
 			ended = true;
 			cb();
 		}
-	);
+	});
 
 	Object.defineProperties(stream, {
 		cachedChunks: {
@@ -233,12 +234,14 @@ it('defensive copies prevent transform interference', function (done) {
 });
 
 function pipeToTransform(done) {
-	var transform = through2(function (chunk, enc, cb) {
-		// VERY naive toUpperCase that modifies the existing Buffer
-		for (var i = 0; i < chunk.length; i++) {
-			chunk[i] -= 32;
+	var transform = new Transform({
+		transform: function (chunk, enc, cb) {
+			// VERY naive toUpperCase that modifies the existing Buffer
+			for (var i = 0; i < chunk.length; i++) {
+				chunk[i] -= 32;
+			}
+			cb(null, chunk);
 		}
-		cb(null, chunk);
 	});
 
 	input.pipe(caching).pipe(transform).pipe(copy1);
@@ -250,7 +253,7 @@ function pipeToTransform(done) {
 }
 
 it('ending a stream twice is fine', function () {
-	var s = through2();
+	var s = new PassThrough();
 	s.end();
 	s.end();
 });

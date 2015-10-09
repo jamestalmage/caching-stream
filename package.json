@@ -17,8 +17,7 @@
     "preversion": "xo && mocha"
   },
   "files": [
-    "index.js",
-    "copy-buffer.js"
+    "index.js"
   ],
   "keywords": [
     "stream",
@@ -32,7 +31,6 @@
   "devDependencies": {
     "istanbul": "^0.3.22",
     "mocha": "^2.2.5",
-    "through2": "^2.0.0",
     "xo": "^0.9.0"
   },
   "xo": {
